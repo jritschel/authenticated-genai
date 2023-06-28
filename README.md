@@ -71,21 +71,15 @@ echo PROJECT_ID=$PROJECT_ID
 PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format="value(project_number)")
 
 BASE_DOMAIN="endpoints.${PROJECT_ID}.cloud.goog"
-## TODO if there is a need to move away from Cloud Endpoints, consider either Cloud DNS or nip.io
-# Can use something like service-ip.nip.io or service-iphex.nip.io
-# printf '%02X' 192 168 1 128 | tr '[:upper:]' '[:lower:]'
-
 FQDN="${SERVICE_NAME}.${BASE_DOMAIN}"
 #BRAND_TITLE=${SERVICE_NAME}
 BRAND_TITLE="run"
 
 # IAP settings
-# this is a support email needed by IAP setup
-SUPPORT_EMAIL="$(gcloud config get-value account)" ## use your current account
-# or it can be another group address in your domain
-#SUPPORT_EMAIL="support-group@kayunlam.altostrat.com"
 
-# https://cloud.google.com/load-balancing/docs/quotas#ssl_certificates
+# this is a support email needed by IAP setup
+SUPPORT_EMAIL="$(gcloud config get-value account)"
+
 # Domain name for Google-managed certificates has to be <= 63 characters
 # This length limit only applies to Google-managed SSL certificates. In those certificates, the 64-byte limit only applies to the first domain in the certificate. The length limit for the other domains in the certificate is 253 (which applies to any domain name on the internet, and isn't specific to Google-managed certificates.
 # To avoid hitting this limit, this guide always tries to set up a shorter domain
@@ -177,7 +171,6 @@ gcloud compute network-endpoint-groups create "${SERVICE_NAME}-neg" \
 
 
 # port-name has to be called "http" even though it is HTTPS
-# https://b.corp.google.com/issues/173128677#comment22
 gcloud compute backend-services create ${SERVICE_NAME}-backend --global --protocol=HTTPS --port-name="http" --load-balancing-scheme=EXTERNAL_MANAGED  --iap=enabled,oauth2-client-id=${OAUTH_CLIENT_ID},oauth2-client-secret=${OAUTH_CLIENT_SECRET} 
 
 # Allow the current user to get access via IAP
@@ -190,8 +183,6 @@ gcloud compute backend-services add-backend "${SERVICE_NAME}-backend" \
 
 # Set up the URL map
 gcloud compute url-maps create "${SERVICE_NAME}-https-load-balancer" --default-service="${SERVICE_NAME}-backend"
-# gcloud compute url-maps update "${SERVICE_NAME}-https-load-balancer" --default-service="${SERVICE_NAME}-backend"
-
 
 gcloud compute target-https-proxies create "${SERVICE_NAME}-httpsproxy" \
     --url-map="${SERVICE_NAME}-https-load-balancer" \
@@ -199,7 +190,6 @@ gcloud compute target-https-proxies create "${SERVICE_NAME}-httpsproxy" \
 
 # to update a cert
 # gcloud compute target-https-proxies update "${SERVICE_NAME}-httpsproxy" --ssl-certificates="${SERVICE_NAME}-ssl-cert" 
-
 
 gcloud compute forwarding-rules create ${SERVICE_NAME}-https-forwardingrule \
     --load-balancing-scheme=EXTERNAL_MANAGED \
@@ -227,9 +217,6 @@ gcloud compute forwarding-rules create ${SERVICE_NAME}-http-forwardingrule \
     --global --ports=80 --address=${SERVICE_NAME}-ip
 
 printf "\n\n\nThe URL will be https://${FQDN} \n\n\n"
-
-
-
 
 gsutil cp gs://jkr-public/genai.tar .
 tar xvf genai.tar
